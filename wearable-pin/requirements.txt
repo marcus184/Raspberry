@@ -1,0 +1,23 @@
+# Python dependencies for Wearable Pin Raspberry Pi Camera Project
+#
+# Note: picamera2 is typically installed via apt-get on Raspberry Pi OS:
+#   sudo apt-get install -y python3-picamera2
+#
+# If installing via pip (not recommended on Raspberry Pi), use:
+#   pip install picamera2
+
+# Core dependencies
+# picamera2 is optional - code will run in mock mode if not available
+# Uncomment the line below if installing via pip (not recommended for Raspberry Pi)
+# picamera2>=0.3.12
+
+# Standard library modules used (no pip installation needed):
+# - os
+# - sys
+# - time
+# - datetime
+# - pathlib
+
+# No additional pip packages required for this project
+# All dependencies are either standard library or installed via apt-get
+

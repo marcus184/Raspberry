@@ -1,0 +1,21 @@
+[Unit]
+Description=Wearable Pin Auto-Update Service
+After=network.target
+Wants=network.target
+
+[Service]
+Type=oneshot
+User=pi
+Group=pi
+WorkingDirectory=/home/pi/wearable-pin/wearable-pin
+ExecStart=/home/pi/wearable-pin/wearable-pin/pi/scripts/update.sh
+StandardOutput=journal
+StandardError=journal
+
+# Security settings
+NoNewPrivileges=true
+PrivateTmp=true
+
+# Allow network access for git operations
+PrivateNetwork=false
+

@@ -1,0 +1,15 @@
+[Unit]
+Description=Wearable Pin Auto-Update Timer
+Requires=update.service
+
+[Timer]
+# Run 2 minutes after boot
+OnBootSec=2min
+# Run every 2 minutes
+OnUnitActiveSec=2min
+# If system was off and missed runs, catch up quickly
+AccuracySec=1min
+
+[Install]
+WantedBy=timers.target
+

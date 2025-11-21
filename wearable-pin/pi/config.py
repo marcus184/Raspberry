@@ -1,11 +1,22 @@
 """
 Configuration settings for the Raspberry Pi camera wearable pin.
+Supports Arducam 5MP OV5647 and standard Raspberry Pi cameras.
 """
 
 import os
 
+# Camera type: 'standard' for Arducam OV5647 or Pi camera, 'arducam_16mp' for IMX519, 'auto' for auto-detect
+CAMERA_TYPE = 'standard'  # Options: 'standard', 'arducam_16mp', 'auto'
+# Note: Arducam 5MP OV5647 works as 'standard' camera type
+
 # Camera settings
-CAMERA_RESOLUTION = (1920, 1080)
+# Arducam 5MP OV5647: Max resolution 2592 x 1944 (5MP)
+# Standard Pi Camera: Max resolution varies by model
+# Recommended for OV5647: 1920x1080 (1080p) for best performance
+CAMERA_RESOLUTION = (1920, 1080)  # 1080p recommended for OV5647
+# Alternative resolutions for OV5647:
+# CAMERA_RESOLUTION = (2592, 1944)  # Full 5MP - slower but higher quality
+# CAMERA_RESOLUTION = (1280, 720)    # 720p - fastest option
 CAMERA_FRAMERATE = 30
 CAMERA_ROTATION = 0
 CAMERA_ISO = 0  # Auto ISO
