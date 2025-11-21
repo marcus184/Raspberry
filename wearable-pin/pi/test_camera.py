@@ -86,6 +86,7 @@ def test_image_capture():
     test_dir.mkdir(parents=True, exist_ok=True)
     test_image = test_dir / "test_capture.jpg"
     
+    camera = None
     try:
         camera = Picamera2()
         config_dict = camera.create_still_configuration()
@@ -102,16 +103,17 @@ def test_image_capture():
             
             # Cleanup
             test_image.unlink()
-            camera.stop()
             return True
         else:
             print(f"✗ FAILED: Image file not created or is empty")
-            camera.stop()
             return False
             
     except Exception as e:
         print(f"✗ FAILED: Image capture failed - {e}")
         return False
+    finally:
+        if camera is not None:
+            camera.stop()
 
 
 def test_configuration():

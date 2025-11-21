@@ -88,7 +88,10 @@ def initialize_camera(logger):
         
         # Apply rotation if needed
         if config.CAMERA_ROTATION != 0:
-            camera.set_controls({"Rotation": config.CAMERA_ROTATION})
+            try:
+                camera.set_controls({"Rotation": config.CAMERA_ROTATION})
+            except Exception as e:
+                logger.warning(f"Could not set rotation (not supported on this camera): {e}")
         
         camera.start()
         time.sleep(2)  # Allow camera to warm up
