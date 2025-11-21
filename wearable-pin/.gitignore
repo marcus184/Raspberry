@@ -76,11 +76,9 @@ images/
 !setup.cfg
 
 # Logs
-*.log
 logs/
 
 # OS
-.DS_Store
 Thumbs.db
 
 # Temporary files
