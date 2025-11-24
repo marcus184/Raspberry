@@ -24,7 +24,12 @@ CAMERA_ISO = 0  # Auto ISO
 # Image settings
 IMAGE_FORMAT = 'jpeg'
 IMAGE_QUALITY = 85
+# Image directory - change this path to save images to a specific location
 IMAGE_DIR = os.path.expanduser('~/wearable-pin/images')
+# Alternative locations:
+# IMAGE_DIR = '/home/pi/Pictures'  # Save to Pictures folder
+# IMAGE_DIR = '/media/usb'  # Save to USB drive
+# IMAGE_DIR = '/tmp/captures'  # Save to temp (cleared on reboot)
 
 # Capture settings
 CAPTURE_DELAY = 0  # Seconds before capture

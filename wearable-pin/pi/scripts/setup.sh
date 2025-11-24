@@ -39,20 +39,24 @@ sudo apt-get install -y \
     git \
     systemd
 
-# Check OS version (Arducam requires Raspberry Pi OS, not Raspbian)
+# Check OS version
 echo ""
 echo "Checking OS compatibility..."
 if [ -f /etc/os-release ]; then
-    if grep -qi "raspbian" /etc/os-release; then
-        echo "WARNING: Raspbian detected. Arducam 16MP requires Raspberry Pi OS (not Raspbian)."
-        echo "Please upgrade to Raspberry Pi OS for Arducam support."
-        read -p "Continue anyway? (y/N): " -n 1 -r
-        echo
-        if [[ ! $REPLY =~ ^[Yy]$ ]]; then
-            exit 1
+    OS_INFO=$(cat /etc/os-release)
+    if echo "$OS_INFO" | grep -qi "raspberry pi os"; then
+        echo "✓ Raspberry Pi OS detected - compatible with Arducam 5MP OV5647"
+        if echo "$OS_INFO" | grep -qi "lite"; then
+            echo "  OS Lite version detected (headless)"
         fi
+        # Check for 64-bit
+        if [ "$(uname -m)" = "aarch64" ]; then
+            echo "  64-bit architecture detected"
+        fi
+    elif echo "$OS_INFO" | grep -qi "raspbian"; then
+        echo "✓ Raspbian detected - compatible with Arducam 5MP OV5647"
     else
-        echo "Raspberry Pi OS detected - compatible with Arducam"
+        echo "⚠ Unknown OS - may still work with OV5647"
     fi
 fi
 

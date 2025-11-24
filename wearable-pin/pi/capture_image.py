@@ -131,9 +131,10 @@ class CameraCapture:
             print(f"Error initializing camera: {e}")
             print("\nTroubleshooting tips:")
             print("1. Ensure camera is properly connected to CSI port")
-            print("2. For Arducam: Check that camera interface is enabled in raspi-config")
-            print("3. Verify you're using Raspberry Pi OS (not Raspbian)")
-            print("4. Try: libcamera-hello --list-cameras")
+            print("2. Check that camera interface is enabled: sudo raspi-config")
+            print("3. Verify camera detection: libcamera-hello --list-cameras")
+            print("4. Check camera status: vcgencmd get_camera")
+            print("5. For Pi OS Lite 64-bit: Ensure python3-picamera2 is installed")
             return False
     
     def capture_image(self, filename=None):
@@ -201,8 +202,60 @@ class CameraCapture:
 
 def main():
     """Main function for command-line usage."""
-    print("Raspberry Pi Camera Capture")
-    print("=" * 40)
+    import argparse
+    
+    # Parse command-line arguments
+    parser = argparse.ArgumentParser(
+        description='Capture image with Arducam 5MP OV5647 on Raspberry Pi Zero 2W',
+        formatter_class=argparse.RawDescriptionHelpFormatter,
+        epilog="""
+Examples:
+  %(prog)s                    # Capture with default filename
+  %(prog)s -o myphoto.jpg     # Save as myphoto.jpg
+  %(prog)s -d /tmp/images     # Save to custom directory
+  %(prog)s -r 2592 1944       # Capture at 5MP resolution
+        """
+    )
+    parser.add_argument('-o', '--output', type=str, default=None,
+                       help='Output filename (default: auto-generated timestamp)')
+    parser.add_argument('-d', '--directory', type=str, default=None,
+                       help='Output directory (default: from config.py)')
+    parser.add_argument('-r', '--resolution', nargs=2, type=int, metavar=('WIDTH', 'HEIGHT'),
+                       default=None,
+                       help='Image resolution WIDTH HEIGHT (default: from config.py)')
+    parser.add_argument('-q', '--quality', type=int, default=None,
+                       help='JPEG quality 1-100 (default: from config.py)')
+    parser.add_argument('-v', '--verbose', action='store_true',
+                       help='Verbose output')
+    
+    args = parser.parse_args()
+    
+    # Override config if command-line arguments provided
+    if args.directory:
+        config.IMAGE_DIR = os.path.expanduser(args.directory)
+        os.makedirs(config.IMAGE_DIR, exist_ok=True)
+    
+    if args.resolution:
+        config.CAMERA_RESOLUTION = tuple(args.resolution)
+    
+    if args.quality:
+        if 1 <= args.quality <= 100:
+            config.IMAGE_QUALITY = args.quality
+        else:
+            print("Error: Quality must be between 1 and 100")
+            sys.exit(1)
+    
+    if args.verbose:
+        print("Raspberry Pi Camera Capture")
+        print("=" * 40)
+        print(f"Camera Type: {config.CAMERA_TYPE}")
+        print(f"Resolution: {config.CAMERA_RESOLUTION}")
+        print(f"Output Directory: {config.IMAGE_DIR}")
+        print(f"Image Format: {config.IMAGE_FORMAT}")
+        print(f"Image Quality: {config.IMAGE_QUALITY}")
+        print("=" * 40)
+    else:
+        print("Raspberry Pi Camera Capture (Arducam 5MP OV5647)")
     
     camera = CameraCapture()
     
@@ -212,17 +265,21 @@ def main():
     
     try:
         # Capture a single image
-        image_path = camera.capture_image()
+        image_path = camera.capture_image(args.output)
         
         if image_path:
-            print(f"\nImage saved to: {image_path}")
-            print(f"File size: {os.path.getsize(image_path)} bytes")
+            file_size = os.path.getsize(image_path)
+            file_size_mb = file_size / (1024 * 1024)
+            print(f"\n✓ Image captured successfully!")
+            print(f"  File: {image_path}")
+            print(f"  Size: {file_size:,} bytes ({file_size_mb:.2f} MB)")
         else:
-            print("Image capture failed")
+            print("✗ Image capture failed")
             sys.exit(1)
             
     except KeyboardInterrupt:
-        print("\nCapture interrupted by user")
+        print("\n✗ Capture interrupted by user")
+        sys.exit(1)
     finally:
         camera.cleanup()
 
