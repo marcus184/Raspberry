@@ -64,7 +64,7 @@ adafruit-circuitpython-neopixel>=1.10.0
 # Main scripts:
 #   - button_capture.py    # Button-triggered camera capture (uses rpicam-still)
 #   - mic_test.py          # Button-triggered microphone recording (uses arecord)
-#   - led_test.py          # WS2812/NeoPixel LED control (uses rpi-ws281x)
+#   - led_test.py          # WS2812/NeoPixel LED control (uses CircuitPython neopixel)
 #   - check_environment.py # Environment validation script
 #
 # ============================================================================
