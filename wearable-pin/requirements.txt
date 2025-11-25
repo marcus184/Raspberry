@@ -1,23 +1,81 @@
-# Python dependencies for Wearable Pin Raspberry Pi Camera Project
+# Python dependencies for Wearable Pin Raspberry Pi Project
 #
+# This project includes camera capture, microphone recording, button control, and LED control
+# for Raspberry Pi Zero 2W wearable applications.
+#
+# ============================================================================
+# INSTALLATION INSTRUCTIONS
+# ============================================================================
+#
+# On Raspberry Pi, install system packages first:
+#   sudo apt-get update
+#   sudo apt-get install -y python3-pip python3-gpiozero libcamera-apps alsa-utils
+#
+# Then install Python packages via pip:
+#   sudo pip3 install -r requirements.txt
+#
+# Note: Some packages may require sudo for hardware access
+#
+# ============================================================================
+# PYTHON PACKAGES (install via pip)
+# ============================================================================
+
+# GPIO control for buttons and sensors
+gpiozero>=1.6.2
+
+# WS2812/NeoPixel LED control
+rpi-ws281x>=4.2.5
+
+# Camera library (optional - current code uses rpicam-still command-line tool)
+# picamera2>=0.3.12
 # Note: picamera2 is typically installed via apt-get on Raspberry Pi OS:
 #   sudo apt-get install -y python3-picamera2
+# If installing via pip (not recommended), uncomment the line above
+
+# ============================================================================
+# SYSTEM PACKAGES (install via apt-get)
+# ============================================================================
 #
-# If installing via pip (not recommended on Raspberry Pi), use:
-#   pip install picamera2
-
-# Core dependencies
-# picamera2 is optional - code will run in mock mode if not available
-# Uncomment the line below if installing via pip (not recommended for Raspberry Pi)
-# picamera2>=0.3.12
-
-# Standard library modules used (no pip installation needed):
-# - os
-# - sys
-# - time
-# - datetime
-# - pathlib
-
-# No additional pip packages required for this project
-# All dependencies are either standard library or installed via apt-get
+# Required system packages (not installable via pip):
+#   - python3-gpiozero      # GPIO library (can also use pip version)
+#   - libcamera-apps        # Camera command-line tools (rpicam-still)
+#   - alsa-utils            # Audio recording tools (arecord)
+#
+# Install with:
+#   sudo apt-get install -y python3-gpiozero libcamera-apps alsa-utils
+#
+# ============================================================================
+# STANDARD LIBRARY MODULES (no installation needed)
+# ============================================================================
+#
+# These are built into Python and don't require installation:
+#   - os
+#   - sys
+#   - time
+#   - datetime
+#   - pathlib
+#   - subprocess
+#   - platform
+#
+# ============================================================================
+# PROJECT STRUCTURE
+# ============================================================================
+#
+# Main scripts:
+#   - button_capture.py    # Button-triggered camera capture (uses rpicam-still)
+#   - mic_test.py          # Button-triggered microphone recording (uses arecord)
+#   - led_test.py          # WS2812/NeoPixel LED control (uses rpi-ws281x)
+#   - check_environment.py # Environment validation script
+#
+# ============================================================================
+# HARDWARE REQUIREMENTS
+# ============================================================================
+#
+# - Raspberry Pi Zero 2W (or compatible)
+# - Arducam 5MP OV5647 camera (or compatible)
+# - PH0645 I2S microphone
+# - WS2812/NeoPixel LED (optional)
+# - Momentary push buttons (GPIO 4 for camera, GPIO 23 for microphone)
+#
+# ============================================================================
 
