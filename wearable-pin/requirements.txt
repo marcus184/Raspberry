@@ -23,8 +23,8 @@
 # GPIO control for buttons and sensors
 gpiozero>=1.6.2
 
-# WS2812/NeoPixel LED control
-rpi-ws281x>=4.2.5
+# WS2812/NeoPixel LED control (CircuitPython)
+adafruit-circuitpython-neopixel>=1.10.0
 
 # Camera library (optional - current code uses rpicam-still command-line tool)
 # picamera2>=0.3.12
