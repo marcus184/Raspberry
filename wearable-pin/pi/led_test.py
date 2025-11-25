@@ -5,6 +5,7 @@ Uses rpi_ws281x library for LED control
 Configured for single LED on GPIO 13
 """
 
+import os
 import time
 import sys
 
@@ -130,6 +131,5 @@ def main():
 
 
 if __name__ == "__main__":
-    import os
     main()
 
