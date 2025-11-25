@@ -51,6 +51,7 @@ Button Pin 2  ---------------->  GND      (Pin 6 or 14)
 
 ### Step 1: Enable I2S Interface
 
+**Method 1: Using raspi-config (Simple)**
 ```bash
 # Open configuration
 sudo raspi-config
@@ -62,6 +63,40 @@ sudo raspi-config
 3. Select **Yes** to enable I2S
 4. **Finish**
 5. Choose **Yes** to reboot
+
+**Method 2: Manual Configuration (Recommended for PH0645)**
+```bash
+# Edit boot configuration
+# Note: Path may be /boot/config.txt on Legacy OS or /boot/firmware/config.txt on newer OS
+sudo nano /boot/config.txt
+# Or on newer OS: sudo nano /boot/firmware/config.txt
+```
+
+**Add these THREE lines at the bottom of the file:**
+```
+dtparam=i2s=on
+dtoverlay=i2s-mmap
+dtoverlay=googlevoicehat-soundcard
+```
+
+**Explanation:**
+- `dtparam=i2s=on` → enables the I2S hardware
+- `dtoverlay=i2s-mmap` → required for DMA (Direct Memory Access)
+- `dtoverlay=googlevoicehat-soundcard` → generic I2S MEMS mic driver (works with PH0645 and most I2S microphones)
+
+**Note:** The `googlevoicehat-soundcard` overlay is a generic driver that works with PH0645 and many other I2S MEMS microphones. If this doesn't work, you may need to try:
+- `dtoverlay=seeed-voicecard` (for Seeed Studio mics)
+- `dtoverlay=micmon` (alternative I2S mic driver)
+- Or check PH0645 manufacturer documentation for specific overlay
+
+**Save and exit:**
+- Press `CTRL+O`, then `ENTER` to save
+- Press `CTRL+X` to exit
+
+**Reboot:**
+```bash
+sudo reboot
+```
 
 ### Step 2: Install Audio Tools
 
@@ -76,16 +111,25 @@ sudo apt-get install -y alsa-utils python3-gpiozero
 ```bash
 # List audio devices
 arecord -l
-
-# Should show I2S device, something like:
-# card 0: sndrpihifiberry [snd_rpi_hifiberry_dac], device 0: HifiBerry DAC HiFi wm8804-spdif-0 []
-# Or similar I2S device
 ```
+
+**Expected output for PH0645 with googlevoicehat-soundcard:**
+```
+**** List of CAPTURE Hardware Devices ****
+card 0: sndrpigooglevoi [snd_rpi_googlevoicehat_soundcar], device 0: Google voiceHAT SoundCard HiFi voicehat-hifi-0 [Google voiceHAT SoundCard HiFi voicehat-hifi-0]
+  Subdevices: 1/1
+  Subdevice #0: subdevice #0
+```
+
+**Device path:** `hw:0,0` (card 0, device 0)
+
+If you see this output, your PH0645 microphone is correctly configured!
 
 ### Step 4: Test Microphone
 
 ```bash
 # Test recording (5 seconds)
+# Use hw:0,0 for PH0645 with googlevoicehat-soundcard overlay
 arecord -D hw:0,0 -f S16_LE -r 16000 -c 1 -d 5 test.wav
 
 # Play back (if speaker connected)
@@ -93,7 +137,10 @@ aplay test.wav
 
 # Check file
 ls -lh test.wav
+# Should show WAV file (~160KB for 5 seconds at 16kHz)
 ```
+
+**If you see the device listed as `card 0: sndrpigooglevoi`, use `hw:0,0` in commands.**
 
 ### Step 5: Clone Repository and Test
 
@@ -159,12 +206,23 @@ python3 mic_test.py
 
 ### I2S Not Detected
 ```bash
-# Check I2S is enabled
-sudo raspi-config  # Interface Options → I2S → Enable
-
-# Check dtoverlay
+# Check I2S configuration
+# On Legacy OS:
 cat /boot/config.txt | grep i2s
-# Should show: dtoverlay=i2s-mmap or similar
+# On newer OS:
+cat /boot/firmware/config.txt | grep i2s
+
+# Should show:
+# dtparam=i2s=on
+# dtoverlay=i2s-mmap
+# dtoverlay=googlevoicehat-soundcard
+
+# If missing, add manually:
+sudo nano /boot/config.txt  # Or /boot/firmware/config.txt
+# Add at bottom:
+# dtparam=i2s=on
+# dtoverlay=i2s-mmap
+# dtoverlay=googlevoicehat-soundcard
 
 # Reboot after enabling
 sudo reboot

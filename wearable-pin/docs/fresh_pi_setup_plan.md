@@ -113,6 +113,7 @@ sudo raspi-config
 5. Choose **Yes** to reboot
 
 ### Step 3.2: Enable I2S Interface (If Testing Microphone)
+**Option A: Using raspi-config**
 ```bash
 # Open configuration
 sudo raspi-config
@@ -124,6 +125,28 @@ sudo raspi-config
 3. Select **Yes** to enable I2S
 4. **Finish**
 5. Choose **Yes** to reboot
+
+**Option B: Manual Configuration (Recommended for PH0645)**
+```bash
+# Edit boot configuration
+# Legacy OS: /boot/config.txt
+# Newer OS: /boot/firmware/config.txt
+sudo nano /boot/config.txt
+```
+
+**Add these THREE lines at the bottom:**
+```
+dtparam=i2s=on
+dtoverlay=i2s-mmap
+dtoverlay=googlevoicehat-soundcard
+```
+
+**Save:** `CTRL+O`, `ENTER`, `CTRL+X`
+
+**Reboot:**
+```bash
+sudo reboot
+```
 
 ### Step 3.3: Verify After Reboot
 ```bash

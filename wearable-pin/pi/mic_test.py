@@ -2,6 +2,7 @@
 """
 Microphone test script for PH0645 I2S microphone
 Button-triggered audio recording
+Uses arecord with I2S interface
 """
 
 import os
@@ -21,10 +22,10 @@ except ImportError:
 # Configuration
 BUTTON_PIN = 23  # GPIO pin for button
 SAVE_DIR = os.path.expanduser("~/recordings")  # Save location
-RECORD_DURATION = 5  # Seconds to record
-SAMPLE_RATE = 16000  # Sample rate in Hz (16kHz for I2S mic)
-CHANNELS = 1  # Mono recording
-FORMAT = "wav"  # Audio format
+SAMPLE_RATE = 48000  # Sample rate in Hz (48kHz)
+CHANNELS = 2  # Stereo recording
+AUDIO_FORMAT = "S32_LE"  # 32-bit signed little-endian
+FORMAT = "wav"  # Audio file format
 
 
 def check_arecord():
@@ -74,45 +75,55 @@ def list_audio_devices():
         return None
 
 
-def record_audio(filepath, duration=RECORD_DURATION, sample_rate=SAMPLE_RATE):
-    """Record audio using arecord and save to filepath."""
+def record_audio_while_pressed(filepath, button, sample_rate=SAMPLE_RATE):
+    """Record audio while button is pressed using arecord."""
     try:
         # Build arecord command for I2S microphone
-        # Use hw:0,0 for first I2S device (adjust if needed)
+        # For PH0645 with googlevoicehat-soundcard: hw:0,0
+        # Format: arecord -D hw:0,0 -f S32_LE -r 48000 -c 2 test.wav
         cmd = [
             "arecord",
-            "-D", "hw:0,0",  # I2S device (may need to adjust)
-            "-f", "S16_LE",  # 16-bit signed little-endian
-            "-r", str(sample_rate),  # Sample rate
-            "-c", str(CHANNELS),  # Channels
-            "-d", str(duration),  # Duration in seconds
+            "-D", "hw:0,0",  # I2S device (card 0, device 0 for PH0645)
+            "-f", AUDIO_FORMAT,  # 32-bit signed little-endian
+            "-r", str(sample_rate),  # Sample rate (48kHz)
+            "-c", str(CHANNELS),  # Channels (stereo)
             filepath
         ]
         
-        print(f"Recording {duration} seconds...")
+        print("Recording... (release button to stop)")
         
-        # Execute recording
-        result = subprocess.run(
+        # Start recording process
+        recording_process = subprocess.Popen(
             cmd,
-            capture_output=True,
-            text=True,
-            timeout=duration + 5
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE
         )
         
-        if result.returncode == 0 and os.path.exists(filepath):
+        # Wait for button release
+        button.wait_for_release()
+        
+        # Stop recording
+        recording_process.terminate()
+        
+        # Wait a moment for process to finish
+        try:
+            recording_process.wait(timeout=2)
+        except subprocess.TimeoutExpired:
+            recording_process.kill()
+            recording_process.wait()
+        
+        # Check if file was created
+        if os.path.exists(filepath) and os.path.getsize(filepath) > 0:
             file_size = os.path.getsize(filepath)
             file_size_kb = file_size / 1024
+            file_size_mb = file_size / (1024 * 1024)
             print(f"✓ Audio recorded: {filepath}")
-            print(f"  Size: {file_size:,} bytes ({file_size_kb:.2f} KB)")
+            print(f"  Size: {file_size:,} bytes ({file_size_kb:.2f} KB / {file_size_mb:.2f} MB)")
             return True
         else:
-            print(f"✗ Recording failed")
-            if result.stderr:
-                print(f"  Error: {result.stderr}")
+            print(f"✗ Recording failed - file not created or empty")
             return False
-    except subprocess.TimeoutExpired:
-        print("✗ Recording timed out")
-        return False
+            
     except Exception as e:
         print(f"✗ Recording failed: {e}")
         return False
@@ -173,8 +184,10 @@ def main():
     print("Microphone Test - PH0645 I2S Mic")
     print("=" * 50)
     print(f"Button GPIO: {BUTTON_PIN}")
-    print(f"Record Duration: {RECORD_DURATION} seconds")
+    print(f"Recording Mode: Press and hold button (release to stop)")
+    print(f"Format: {AUDIO_FORMAT}")
     print(f"Sample Rate: {SAMPLE_RATE} Hz")
+    print(f"Channels: {CHANNELS} (Stereo)")
     print(f"Save location: {SAVE_DIR}")
     print("=" * 50)
     
@@ -196,9 +209,14 @@ def main():
         print("⚠ Warning: I2S microphone may not be detected")
         print("\nTroubleshooting:")
         print("1. Check I2S is enabled: sudo raspi-config")
-        print("2. Check wiring connections")
-        print("3. Verify device: arecord -l")
-        print("4. Try different device: arecord -D hw:1,0 -l")
+        print("2. Check /boot/config.txt has:")
+        print("   dtparam=i2s=on")
+        print("   dtoverlay=i2s-mmap")
+        print("   dtoverlay=googlevoicehat-soundcard")
+        print("3. Check wiring connections")
+        print("4. Verify device: arecord -l")
+        print("   Should show: card 0: sndrpigooglevoi")
+        print("5. Reboot after config changes")
         print("\nContinuing anyway...")
     
     # Create save directory
@@ -210,23 +228,39 @@ def main():
     button = Button(BUTTON_PIN, pull_up=True)
     print("Button ready!")
     
-    # Test recording
+    # Test recording (quick 1 second test)
     print("\nTesting microphone...")
     test_file = os.path.join(SAVE_DIR, "test_mic.wav")
-    if record_audio(test_file, duration=2):
-        print("✓ Microphone test successful")
-        # Remove test file
-        try:
-            os.remove(test_file)
-        except:
-            pass
-    else:
-        print("✗ Microphone test failed")
-        print("\nTroubleshooting:")
-        print("1. Check I2S is enabled: sudo raspi-config")
-        print("2. Check wiring: SCK->GPIO18, WS->GPIO19, SD->GPIO20")
-        print("3. Check device: arecord -l")
-        print("4. Try: arecord -D hw:0,0 -f S16_LE -r 16000 -c 1 -d 2 test.wav")
+    test_cmd = [
+        "arecord",
+        "-D", "hw:0,0",
+        "-f", AUDIO_FORMAT,
+        "-r", str(SAMPLE_RATE),
+        "-c", str(CHANNELS),
+        "-d", "1",  # 1 second test
+        test_file
+    ]
+    try:
+        result = subprocess.run(test_cmd, capture_output=True, text=True, timeout=5)
+        if result.returncode == 0 and os.path.exists(test_file):
+            file_size = os.path.getsize(test_file)
+            print(f"✓ Microphone test successful ({file_size} bytes)")
+            # Remove test file
+            try:
+                os.remove(test_file)
+            except:
+                pass
+        else:
+            print("✗ Microphone test failed")
+            print("\nTroubleshooting:")
+            print("1. Check I2S is enabled: sudo raspi-config")
+            print("2. Check /boot/config.txt has googlevoicehat-soundcard overlay")
+            print("3. Check wiring: SCK->GPIO18, WS->GPIO19, SD->GPIO20")
+            print("4. Check device: arecord -l")
+            print(f"5. Try: arecord -D hw:0,0 -f {AUDIO_FORMAT} -r {SAMPLE_RATE} -c {CHANNELS} -d 1 test.wav")
+            exit(1)
+    except Exception as e:
+        print(f"✗ Microphone test failed: {e}")
         exit(1)
     
     # Main loop
@@ -238,22 +272,23 @@ def main():
     try:
         while True:
             # Wait for button press
+            print("\nPress and HOLD button to start recording...")
             button.wait_for_press()
-            print("\nButton pressed! Recording...")
+            print("Button pressed! Recording started...")
             
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
             filename = f"recording_{timestamp}.{FORMAT}"
             filepath = os.path.join(SAVE_DIR, filename)
             
-            # Record audio
-            if record_audio(filepath, duration=RECORD_DURATION):
+            # Record audio while button is pressed
+            if record_audio_while_pressed(filepath, button):
                 print("Ready for next recording...")
             else:
                 print("Recording failed. Ready to try again...")
             
             # Small delay to prevent multiple recordings from button bounce
-            time.sleep(0.5)
+            time.sleep(0.3)
             
     except KeyboardInterrupt:
         print("\n\nShutting down...")
