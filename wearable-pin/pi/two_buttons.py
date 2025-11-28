@@ -65,10 +65,11 @@ except ImportError:
     print("Warning: Cloud upload not available. Install requests: sudo pip3 install requests")
 
 # Recording configuration
-PHOTO_INTERVAL = 2.0  # Take photo every 2 seconds
+PHOTO_INTERVAL = 1.0  # Take photo every 1 second
 AUDIO_SAMPLE_RATE = 48000  # 48kHz
 AUDIO_CHANNELS = 2  # Stereo
 AUDIO_FORMAT = "S32_LE"  # 32-bit signed little-endian
+SHUTTER_SPEED = 1000  # Shutter speed in microseconds (1000 = 1ms, fast for snappy shots)
 
 
 class RecordingSession:
@@ -113,7 +114,7 @@ class RecordingSession:
             print(f"\n{'='*50}")
             print(f"🔴 Recording Started: {self.session_id}")
             print(f"{'='*50}")
-            print(f"📸 Photos: Every {PHOTO_INTERVAL} seconds")
+            print(f"📸 Photos: Every {PHOTO_INTERVAL} second(s) (fast shutter)")
             print(f"🎤 Audio: Recording to {os.path.basename(self.audio_file)}")
             print(f"Press red button again to stop and upload")
             return True
@@ -212,7 +213,7 @@ class RecordingSession:
                 break
     
     def _capture_photo(self, filepath):
-        """Capture a single photo using rpicam-still."""
+        """Capture a single photo using rpicam-still with fast shutter speed."""
         try:
             cmd = [
                 "rpicam-still",
@@ -221,6 +222,7 @@ class RecordingSession:
                 "--height", str(RESOLUTION.split("x")[1]),
                 "--quality", str(QUALITY),
                 "--timeout", "1000",
+                "--shutter", str(SHUTTER_SPEED),  # Fast shutter speed for snappy shots
                 "--nopreview"
             ]
             
@@ -335,7 +337,8 @@ def main():
     print("=" * 50)
     print(f"Red Button GPIO: {RED_BUTTON_PIN}")
     print(f"Second Button GPIO: {SECOND_BUTTON_PIN} (reserved)")
-    print(f"Photo interval: {PHOTO_INTERVAL} seconds")
+    print(f"Photo interval: {PHOTO_INTERVAL} second(s)")
+    print(f"Shutter speed: {SHUTTER_SPEED}μs (fast/snappy)")
     print(f"Photo save: {SAVE_DIR}")
     print(f"Audio save: {RECORDINGS_DIR}")
     print("=" * 50)
