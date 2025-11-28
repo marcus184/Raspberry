@@ -29,3 +29,11 @@ IMAGE_FORMAT = "jpeg"  # Image format (jpeg or png)
 # Button Settings
 BUTTON_DEBOUNCE = 0.5  # Seconds to wait between captures (prevents double-press)
 
+# Cloud Upload Settings
+UPLOAD_ENABLED = True  # Set to True to enable automatic upload after capture
+UPLOAD_SERVER_URL = "https://662a630e-2600-4c96-bdad-c6c625b41c0e-00-13s949ql9aoor.janeway.replit.dev:3000"  # Replit server URL
+# For local development, use: "http://localhost:5001"
+# Replit URL format: "https://your-repl-name.replit.app" or your deployment URL
+UPLOAD_MAX_SIZE_MB = 20  # Maximum file size in MB (Pi Zero 2W optimized, Replit allows 50MB)
+UPLOAD_TIMEOUT = 30  # Upload timeout in seconds
+

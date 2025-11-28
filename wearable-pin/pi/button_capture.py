@@ -8,6 +8,7 @@ Uses rpicam-still command-line tool
 import os
 import time
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 
@@ -19,13 +20,41 @@ except ImportError:
     print("Error: gpiozero not available. Install with: sudo apt-get install python3-gpiozero")
     exit(1)
 
+# Import configuration
+try:
+    import button_config as config
+    BUTTON_PIN = config.BUTTON_PIN
+    SAVE_DIR = os.path.expanduser(config.SAVE_DIR)
+    RESOLUTION = f"{config.RESOLUTION[0]}x{config.RESOLUTION[1]}"
+    IMAGE_FORMAT = config.IMAGE_FORMAT
+    QUALITY = 85  # Default quality
+    
+    # Cloud upload configuration
+    UPLOAD_ENABLED = config.UPLOAD_ENABLED
+    UPLOAD_SERVER_URL = config.UPLOAD_SERVER_URL
+    UPLOAD_MAX_SIZE_MB = config.UPLOAD_MAX_SIZE_MB
+    UPLOAD_TIMEOUT = config.UPLOAD_TIMEOUT
+except ImportError:
+    # Fallback to hardcoded values if config not available
+    BUTTON_PIN = 4
+    SAVE_DIR = os.path.expanduser("~/pictures")
+    RESOLUTION = "1920x1080"
+    IMAGE_FORMAT = "jpg"
+    QUALITY = 85
+    UPLOAD_ENABLED = False
+    UPLOAD_SERVER_URL = "http://localhost:5001"
+    UPLOAD_MAX_SIZE_MB = 20
+    UPLOAD_TIMEOUT = 30
 
-# Configuration
-BUTTON_PIN = 4  # GPIO pin for button (change if needed)
-SAVE_DIR = os.path.expanduser("~/pictures")  # Save location
-RESOLUTION = "1920x1080"  # 1080p for OV5647 (or use 2592x1944 for 5MP)
-IMAGE_FORMAT = "jpg"
-QUALITY = 85  # JPEG quality 1-100
+# Import cloud upload function
+try:
+    from cloud_upload_test import upload_file
+    UPLOAD_AVAILABLE = True
+except ImportError:
+    UPLOAD_AVAILABLE = False
+    if UPLOAD_ENABLED:
+        print("Warning: Cloud upload enabled but cloud_upload_test module not available")
+        print("Install requests: sudo pip3 install requests")
 
 
 def check_rpicam():
@@ -121,9 +150,65 @@ def test_button():
         print("Button is working correctly!" if press_count > 0 else "No presses detected.")
 
 
+def upload_captured_image(filepath):
+    """
+    Upload a captured image to the cloud server.
+    
+    Args:
+        filepath: Path to the captured image file
+    
+    Returns:
+        bool: True if upload successful, False otherwise
+    """
+    if not UPLOAD_AVAILABLE:
+        print("⚠ Upload not available (requests library missing)")
+        return False
+    
+    if not UPLOAD_ENABLED:
+        return False
+    
+    try:
+        max_file_size_bytes = UPLOAD_MAX_SIZE_MB * 1024 * 1024
+        result = upload_file(
+            filepath,
+            server_url=UPLOAD_SERVER_URL,
+            max_file_size=max_file_size_bytes,
+            timeout=UPLOAD_TIMEOUT,
+            check_mem=True,
+            verbose=True
+        )
+        
+        if result["success"]:
+            print("✓ Image uploaded successfully")
+            if "response" in result:
+                resp = result['response']
+                if isinstance(resp, dict):
+                    # Replit response format: originalName, filename, size, path
+                    print(f"  Original: {resp.get('originalName', 'N/A')}")
+                    print(f"  Saved as: {resp.get('filename', 'N/A')}")
+                    size_bytes = resp.get('size', 0)
+                    if size_bytes:
+                        size_mb = size_bytes / (1024 * 1024)
+                        print(f"  Size: {size_bytes} bytes ({size_mb:.2f} MB)")
+                    print(f"  Path: {resp.get('path', 'N/A')}")
+            return True
+        else:
+            print(f"⚠ Upload failed: {result.get('error', 'Unknown error')}")
+            if "hint" in result:
+                print(f"  Hint: {result['hint']}")
+            return False
+    
+    except Exception as e:
+        print(f"⚠ Upload error: {e}")
+        return False
+
+
 def main():
     """Main function."""
-    import sys
+    # Check for --no-upload flag
+    no_upload = '--no-upload' in sys.argv or '-n' in sys.argv
+    if no_upload:
+        sys.argv = [arg for arg in sys.argv if arg not in ['--no-upload', '-n']]
     
     # Check for test mode
     if len(sys.argv) > 1 and sys.argv[1] in ['--test', '-t', 'test']:
@@ -136,6 +221,14 @@ def main():
     print(f"Button GPIO: {BUTTON_PIN}")
     print(f"Resolution: {RESOLUTION}")
     print(f"Save location: {SAVE_DIR}")
+    if no_upload:
+        print("Cloud upload: DISABLED (--no-upload flag)")
+    elif UPLOAD_ENABLED and UPLOAD_AVAILABLE:
+        print(f"Cloud upload: ENABLED ({UPLOAD_SERVER_URL})")
+    elif UPLOAD_ENABLED and not UPLOAD_AVAILABLE:
+        print("Cloud upload: ENABLED but not available (install requests)")
+    else:
+        print("Cloud upload: DISABLED (set UPLOAD_ENABLED=True in button_config.py)")
     print("=" * 50)
     
     # Check if rpicam-still is available
@@ -191,11 +284,18 @@ def main():
             
             # Generate filename with timestamp
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"capture_{timestamp}.{IMAGE_FORMAT}"
+            # Normalize image format (jpeg -> jpg for filename)
+            img_ext = IMAGE_FORMAT.replace("jpeg", "jpg")
+            filename = f"capture_{timestamp}.{img_ext}"
             filepath = os.path.join(SAVE_DIR, filename)
             
             # Capture image
             if capture_image(filepath):
+                # Attempt to upload if enabled and not disabled by flag
+                if not no_upload:
+                    if UPLOAD_ENABLED and UPLOAD_AVAILABLE:
+                        print("Uploading image...")
+                        upload_captured_image(filepath)
                 print("Ready for next capture...")
             else:
                 print("Capture failed. Ready to try again...")
@@ -216,12 +316,17 @@ if __name__ == "__main__":
     if len(sys.argv) > 1 and sys.argv[1] in ['--help', '-h', 'help']:
         print("Button Camera Capture")
         print("\nUsage:")
-        print("  python3 button_capture.py          # Normal mode - capture images")
-        print("  python3 button_capture.py --test  # Test mode - test button only")
-        print("  python3 button_capture.py -t      # Test mode (short)")
-        print("\nTest mode:")
-        print("  Tests button functionality without camera")
-        print("  Shows button presses in command line")
+        print("  python3 button_capture.py              # Normal mode - capture images")
+        print("  python3 button_capture.py --test      # Test mode - test button only")
+        print("  python3 button_capture.py --no-upload # Disable cloud upload")
+        print("  python3 button_capture.py -t          # Test mode (short)")
+        print("  python3 button_capture.py -n          # No upload (short)")
+        print("\nModes:")
+        print("  Normal mode: Captures images when button is pressed")
+        print("  Test mode: Tests button functionality without camera")
+        print("  --no-upload: Disables cloud upload even if enabled in config")
+        print("\nConfiguration:")
+        print("  Edit button_config.py to enable/configure cloud upload")
         sys.exit(0)
     
     main()
