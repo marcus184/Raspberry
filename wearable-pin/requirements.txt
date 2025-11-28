@@ -26,6 +26,9 @@ gpiozero>=1.6.2
 # WS2812/NeoPixel LED control (CircuitPython)
 adafruit-circuitpython-neopixel>=1.10.0
 
+# HTTP requests for cloud upload
+requests>=2.28.0
+
 # Camera library (optional - current code uses rpicam-still command-line tool)
 # picamera2>=0.3.12
 # Note: picamera2 is typically installed via apt-get on Raspberry Pi OS:
@@ -65,6 +68,7 @@ adafruit-circuitpython-neopixel>=1.10.0
 #   - button_capture.py    # Button-triggered camera capture (uses rpicam-still)
 #   - mic_test.py          # Button-triggered microphone recording (uses arecord)
 #   - led_test.py          # WS2812/NeoPixel LED control (uses CircuitPython neopixel)
+#   - cloud_upload_test.py # Cloud file upload to remote server (uses requests)
 #   - check_environment.py # Environment validation script
 #
 # ============================================================================
